@@ -487,9 +487,10 @@ python pdf_validation.py --config configs/end2end.yaml
 ```bash
 python pdf_validation.py --config <config_path>
 ```
+</details>
 
 <details>
-<summary>方式C：skills</summary>
+<summary><b> 方式C：skills </b></summary>
 ```bash
  我需要用omnidocbench做xx模型的评测，用docker部署，GT路径是/path/OmniDocBench.json，预测结果路径是/path/predfolder，需要CDM，请帮我跑分
 ```
