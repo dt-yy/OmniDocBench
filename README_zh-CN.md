@@ -35,7 +35,9 @@ OmniDocBench
 - [评测集介绍](#评测集介绍)
 - [评测](#评测)
   - [环境配置和运行](#环境配置和运行)
-    - [使用docker](#使用docker)
+    - [验证版本](#验证版本)
+    - [Worker 并发配置](#worker-并发配置)
+    - [运行评测](#运行评测)
   - [端到端评测](#端到端评测)
     - [端到端评测方法-end2end](#端到端评测方法-end2end)
     - [端到端评测方法-md2md](#端到端评测方法-md2md)
@@ -394,7 +396,7 @@ bash script/build_repro_docker_image.sh
 ```bash
 conda create -n omnidocbench python=3.10 -y
 conda activate omnidocbench
-git clone <repo_url> && cd Omnidocbench_v1.6
+git clone <repo_url> && cd Omnidocbench
 pip install -e .
 python -c "from src.core.pipeline import run_config_file; print('OK')"
 ```
@@ -563,6 +565,17 @@ $$\text{Overall} = \frac{(1-\textit{Text Edit Distance}) \times 100 + \textit{Ta
             <td>92.02</td>
             <td>95.00</td>
             <td><strong>0.116<strong></td>
+        </tr>
+        <tr>
+            <td>Qianfan-OCR</td>
+            <td>Specialized VLMs</td>
+            <td>4B</td>
+            <td>93.90</td>
+            <td>0.04</td>
+            <td>95.08</td>
+            <td>90.53</td>
+            <td>93.31</td>
+            <td>0.13</td>
         </tr>
         <tr>
             <td>Ovis2.6-30B-A3B</td>
