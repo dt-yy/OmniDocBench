@@ -384,6 +384,7 @@ docker run --rm --entrypoint bash \
 ```bash
 bash script/build_repro_docker_image.sh
 ```
+</details>
 
 <details>
 <summary><b>方式 B：Conda</b></summary>
