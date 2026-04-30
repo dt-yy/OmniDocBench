@@ -35,6 +35,9 @@ OmniDocBench
 - [评测集介绍](#评测集介绍)
 - [评测](#评测)
   - [环境配置和运行](#环境配置和运行)
+    - [验证版本](#验证版本)
+    - [Worker 并发配置](#worker-并发配置)
+    - [运行评测](#运行评测)
   - [端到端评测](#端到端评测)
     - [端到端评测方法-end2end](#端到端评测方法-end2end)
     - [端到端评测方法-md2md](#端到端评测方法-md2md)
@@ -58,6 +61,7 @@ OmniDocBench
 
 ## 更新
 [2026/04/30] 从版本**v1.6** 更新到 **v1.7**,新增QianfanOCR的榜单,支持skills方式评测。
+
 [2026/04/09] **重大版本更新**：从版本**v1.5** 更新到 **v1.6**
   - 评测代码：(1) 我们提出 **Multi-Granularity Adaptive Matching (MGAM)**，通过对预测端进行自适应粒度调整来消除匹配偏差。核心设计原则是：保持 ground truth 不变，仅在预测端搜索最优分段粒度。(2) 为优化CDM的部署，将node.js、katex等依赖包用python版本重写并替换，速度优化3倍左右。
   - 评测集：(1) 新增 **296** 页样本， 样本选取旨在覆盖文档解析中更具挑战性的场景类别，包括复杂嵌套表格、密集数学公式排版、非常规版面结构等; (2) 修正了1.5版本表格、公式、OCR部分标注；
@@ -381,7 +385,108 @@ docker run --rm --entrypoint bash \
 bash script/build_repro_docker_image.sh
 ```
 
+<details>
+<summary><b>方式 B：Conda</b></summary>
+
+> 需要 Ubuntu 22.04 / 20.04，至少 8 GB 磁盘空间和 8 GB 内存，root 权限。
+
+**第 1 步 — 创建环境并安装 Python 依赖**
+
+```bash
+conda create -n omnidocbench python=3.10 -y
+conda activate omnidocbench
+git clone <repo_url> && cd Omnidocbench
+pip install -e .
+python -c "from src.core.pipeline import run_config_file; print('OK')"
+```
+
+**第 2 步 — 安装 Ghostscript**
+
+CDM 指标需要 Ghostscript 通过 ImageMagick 完成 PDF 到 PNG 的转换。
+
+```bash
+sudo apt-get update && sudo apt-get install -y ghostscript
+gs --version   # 预期: 9.55.0 (Ubuntu 22.04)
+```
+
+**第 3 步 — 安装 TeX Live 2025**
+
+CDM 指标需要 `pdflatex` 并支持 CJK 中文字体。
+
+```bash
+cd ~ && wget http://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz
+tar -xzf install-tl-unx.tar.gz && cd install-tl-*/
+sudo ./install-tl   # 交互式安装，全量约 7 GB
+
+echo 'export PATH=/usr/local/texlive/2025/bin/x86_64-linux:$PATH' >> ~/.bashrc
+source ~/.bashrc
+pdflatex --version | head -2   # 预期: pdfTeX ... (TeX Live 2025)
+
+# 验证 CJK 支持
+kpsewhich CJK.sty && kpsewhich c70gkai.fd
+# 如果没有输出: sudo tlmgr install cjk cjkutils arphic gkai
+```
+
+**第 4 步 — 安装 ImageMagick 7.x**（从源码编译）
+
+Ubuntu 22.04 apt 默认是 ImageMagick 6.x，CDM 需要 7.x。
+
+```bash
+sudo apt-get install -y build-essential pkg-config \
+  libjpeg-dev libpng-dev libtiff-dev libwebp-dev \
+  libfreetype6-dev libfontconfig1-dev
+
+cd /tmp
+wget https://github.com/ImageMagick/ImageMagick/archive/refs/tags/7.1.1-47.tar.gz
+tar xzf 7.1.1-47.tar.gz && cd ImageMagick-7.1.1-47
+./configure --with-modules --enable-shared --with-gslib \
+  --with-gs-font-dir=/usr/share/fonts/type1/gsfonts --prefix=/usr/local
+make -j$(nproc) && sudo make install && sudo ldconfig
+magick --version | head -2   # 预期: ImageMagick 7.1.1-47
+
+# 允许 PDF 读写
+POLICY_FILE=$(find /usr/local/etc/ImageMagick-7 -name policy.xml 2>/dev/null | head -1)
+[ -n "$POLICY_FILE" ] && sudo sed -i \
+  's|<policy domain="coder" rights="none" pattern="PDF" />|<policy domain="coder" rights="read\|write" pattern="PDF" />|' \
+  "$POLICY_FILE"
+```
+
+**第 5 步 — 验证并运行**
+
+```bash
+python -m pytest tools/test_environment_and_smoke.py::TestEnvironmentVersions -v -s
+python pdf_validation.py --config configs/end2end.yaml
+```
+
 </details>
+
+#### 验证版本
+
+| 组件 | 版本 |
+|------|------|
+| Python | 3.10.x |
+| TeX Live | 2025 |
+| pdflatex | 3.141592653-2.6-1.40.28 |
+| ImageMagick | 7.1.1-47 |
+| Ghostscript | 9.55.0 |
+
+#### Worker 并发配置
+
+评测流水线有三个并行阶段，建议每个阶段的 worker 数设为机器空闲线程数的 1/3 ~ 1/2，避免死锁或 OOM：
+
+| 阶段 | 配置项 | 说明 |
+|------|--------|------|
+| 页面匹配 | `match_workers` | 文本对齐 |
+| CDM 渲染 | `cdm_workers` | 每个 worker 约 1 GB 内存 |
+| TEDS 表格 | `teds_workers` | 表格结构相似度 |
+
+#### 运行评测
+
+所有评测输入通过 [configs/end2end.yaml](./configs/end2end.yaml) 配置。修改 `ground_truth.data_path` 和 `prediction.data_path` 指向你的数据，然后运行：
+
+```bash
+python pdf_validation.py --config <config_path>
+```
 
 <details>
 <summary>方式C：skills</summary>
