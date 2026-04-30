@@ -36,7 +36,9 @@ Currently supported metrics include:
 - [Benchmark Introduction](#benchmark-introduction)
 - [Evaluation](#evaluation)
   - [Environment Setup and Running](#environment-setup-and-running)
-    - [Using docker](#using-docker)
+    - [Verified versions](#verified-versions)
+    - [Worker concurrency](#worker-concurrency)
+    - [Running the evaluation](#running-the-evaluation)
   - [End-to-End Evaluation](#end-to-end-evaluation)
     - [End-to-End Evaluation Method - end2end](#end-to-end-evaluation-method---end2end)
     - [End-to-end Evaluation Method - md2md](#end-to-end-evaluation-method---md2md)
@@ -571,6 +573,17 @@ $$\text{Overall} = \frac{(1-\textit{Text Edit Distance}) \times 100 + \textit{Ta
             <td>92.02</td>
             <td>95.00</td>
             <td><strong>0.116<strong></td>
+        </tr>
+        <tr>
+            <td>Qianfan-OCR</td>
+            <td>Specialized VLMs</td>
+            <td>4B</td>
+            <td>93.90</td>
+            <td>0.04</td>
+            <td>95.08</td>
+            <td>90.53</td>
+            <td>93.31</td>
+            <td>0.13</td>
         </tr>
         <tr>
             <td>Ovis2.6-30B-A3B</td>
